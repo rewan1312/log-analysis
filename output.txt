@@ -1807,100 +1807,90 @@ Average Requests per Day : 2500.00
 7. Requests by Hour
 --------------------------------------------
 Requests per hour for each day:
-  17/May/2015:
-    Hour 01: 1151 requests
-    Hour 02: 481 requests
-    Hour 10: 74 requests
-    Hour 11: 111 requests
-    Hour 12: 115 requests
-    Hour 13: 118 requests
-    Hour 14: 120 requests
-    Hour 15: 125 requests
-    Hour 16: 126 requests
-    Hour 17: 123 requests
-    Hour 18: 118 requests
-    Hour 19: 121 requests
-    Hour 20: 129 requests
-    Hour 21: 123 requests
-    Hour 22: 118 requests
-    Hour 23: 111 requests
-  18/May/2015:
-     18/May/2015:
-    Hour 00: 116 requests
-    Hour 01: 118 requests
-    Hour 02: 125 requests
-    Hour 03: 114 requests
-    Hour 04: 115 requests
-    Hour 05: 125 requests
-    Hour 06: 121 requests
-    Hour 07: 124 requests
-    Hour 08: 110 requests
-    Hour 09: 122 requests
-    Hour 10: 132 requests
-    Hour 11: 121 requests
-    Hour 12: 120 requests
-    Hour 13: 119 requests
-    Hour 14: 122 requests
-    Hour 15: 133 requests
-    Hour 16: 114 requests
-    Hour 17: 132 requests
-    Hour 18: 123 requests
-    Hour 19: 113 requests
-    Hour 20: 113 requests
-    Hour 21: 130 requests
-    Hour 22: 113 requests
-    Hour 23: 118 requests
-
-  19/May/2015:
-    Hour 00: 117 requests
-    Hour 01: 122 requests
-    Hour 02: 125 requests
-    Hour 03: 113 requests
-    Hour 04: 125 requests
-    Hour 05: 122 requests
-    Hour 06: 130 requests
-    Hour 07: 111 requests
-    Hour 08: 121 requests
-    Hour 09: 117 requests
-    Hour 10: 121 requests
-    Hour 11: 115 requests
-    Hour 12: 115 requests
-    Hour 13: 125 requests
-    Hour 14: 134 requests
-    Hour 15: 112 requests
-    Hour 16: 115 requests
-    Hour 17: 110 requests
-    Hour 18: 130 requests
-    Hour 19: 136 requests
-    Hour 20: 124 requests
-    Hour 21: 114 requests
-    Hour 22: 115 requests
-    Hour 23: 127 requests
-
-  20/May/2015:
-    Hour 00: 128 requests
-    Hour 01: 120 requests
-    Hour 02: 115 requests
-    Hour 03: 127 requests
-    Hour 04: 115 requests
-    Hour 05: 124 requests
-    Hour 06: 115 requests
-    Hour 07: 122 requests
-    Hour 08: 114 requests
-    Hour 09: 125 requests
-    Hour 10: 116 requests
-    Hour 11: 112 requests
-    Hour 12: 112 requests
-    Hour 13: 113 requests
-    Hour 14: 122 requests
-    Hour 15: 126 requests
-    Hour 16: 118 requests
-    Hour 17: 119 requests
-    Hour 18: 107 requests
-    Hour 19: 123 requests
-    Hour 20: 120 requests
-    Hour 21: 86 requests
-
+ 17/May/2015 10 74
+17/May/2015 11 111
+17/May/2015 12 115
+17/May/2015 13 118
+17/May/2015 14 120
+17/May/2015 15 125
+17/May/2015 16 126
+17/May/2015 17 123
+17/May/2015 18 118
+17/May/2015 19 121
+17/May/2015 20 129
+17/May/2015 21 123
+17/May/2015 22 118
+17/May/2015 23 111
+18/May/2015 00 116
+18/May/2015 01 118
+18/May/2015 02 125
+18/May/2015 03 114
+18/May/2015 04 115
+18/May/2015 05 125
+18/May/2015 06 121
+18/May/2015 07 124
+18/May/2015 08 110
+18/May/2015 09 122
+18/May/2015 10 132
+18/May/2015 11 121
+18/May/2015 12 120
+18/May/2015 13 119
+18/May/2015 14 122
+18/May/2015 15 133
+18/May/2015 16 114
+18/May/2015 17 132
+18/May/2015 18 123
+18/May/2015 19 113
+18/May/2015 20 113
+18/May/2015 21 130
+18/May/2015 22 113
+18/May/2015 23 118
+19/May/2015 00 117
+19/May/2015 01 122
+19/May/2015 02 125
+19/May/2015 03 113
+19/May/2015 04 125
+19/May/2015 05 122
+19/May/2015 06 130
+19/May/2015 07 111
+19/May/2015 08 121
+19/May/2015 09 117
+19/May/2015 10 121
+19/May/2015 11 115
+19/May/2015 12 115
+19/May/2015 13 125
+19/May/2015 14 134
+19/May/2015 15 112
+19/May/2015 16 115
+19/May/2015 17 110
+19/May/2015 18 130
+19/May/2015 19 136
+19/May/2015 20 124
+19/May/2015 21 114
+19/May/2015 22 115
+19/May/2015 23 127
+20/May/2015 00 128
+20/May/2015 01 120
+20/May/2015 02 115
+20/May/2015 03 127
+20/May/2015 04 115
+20/May/2015 05 124
+20/May/2015 06 115
+20/May/2015 07 122
+20/May/2015 08 114
+20/May/2015 09 125
+20/May/2015 10 116
+20/May/2015 11 112
+20/May/2015 12 112
+20/May/2015 13 113
+20/May/2015 14 122
+20/May/2015 15 126
+20/May/2015 16 118
+20/May/2015 17 119
+20/May/2015 18 107
+20/May/2015 19 123
+20/May/2015 20 120
+20/May/2015 21 86
 --------------------------------------------
 Requests per hour (across all days):
 
