@@ -1967,7 +1967,6 @@ Daily Trends:
 Observations:
   - Peak hour: Hour 14 with 498 requests.
   - Peak day: 19/May/2015 with 2896 requests.
-  - Trend: Request volume appears to increase over time.
 --------------------------------------------
 
 --------------------------------------------
