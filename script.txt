@@ -1,0 +1,341 @@
+#!/bin/bash
+
+# Log file path
+LOG_FILE="$1"
+
+# Check if log file exists
+if [[ ! -f "$LOG_FILE" ]]; then
+  echo "File not found: $LOG_FILE"
+  exit 1
+fi
+
+# Function to add color
+color_header() {
+  echo -e "\033[4;34m$1\033[0m"
+}
+
+# 1. Request Counts
+color_header "1. Request Counts"
+TOTAL_REQUESTS=$(wc -l < "$LOG_FILE")
+GET_REQUESTS=$(grep '"GET' "$LOG_FILE" | wc -l)
+POST_REQUESTS=$(grep '"POST' "$LOG_FILE" | wc -l)
+OTHER_REQUESTS=$(grep -vE '"(GET|POST)' "$LOG_FILE" | grep -E '"[A-Z]+' | wc -l)
+
+echo "Total Requests:    $TOTAL_REQUESTS"
+echo "GET Requests:      $GET_REQUESTS"
+echo "POST Requests:     $POST_REQUESTS"
+echo "Other Requests:    $OTHER_REQUESTS"
+echo ""
+
+# 2. Unique IP Addresses
+color_header "2. Unique IP Addresses"
+ips=$(awk '{print $1}' "$LOG_FILE" | sort -u)
+echo "Total Unique IPs: $(echo "$ips" | wc -l)"
+
+printf "%-15s %8s %8s\n" "IP" "GET" "POST"
+for ip in $ips; do
+  get_count=$(grep "^$ip " "$LOG_FILE" | grep -c '"GET ')
+  post_count=$(grep "^$ip " "$LOG_FILE" | grep -c '"POST ')
+  printf "%-15s %8d %8d\n" "$ip" "$get_count" "$post_count"
+done
+echo ""
+
+# 3. Failure Requests
+color_header "3. Failure Requests"
+FAIL4=$(grep -E '" [4][0-9][0-9]' "$LOG_FILE" | wc -l)
+FAIL5=$(grep -E '" [5][0-9][0-9]' "$LOG_FILE" | wc -l)
+FAIL_TOTAL=$(( FAIL4 + FAIL5 ))
+FAIL_PCT=$(awk -v f="$FAIL_TOTAL" -v t="$TOTAL_REQUESTS" 'BEGIN { printf "%.2f", (f/t)*100 }')
+
+echo "4xx failures:    $FAIL4"
+echo "5xx failures:    $FAIL5"
+echo "Total failures:  $FAIL_TOTAL ($FAIL_PCT% of total)"
+echo ""
+
+# 4. Top User
+color_header "4. Top User"
+top_ip=$(awk '{print $1}' "$LOG_FILE" | sort | uniq -c | sort -rn | head -n1)
+count=$(echo "$top_ip" | awk '{print $1}')
+ip=$(echo "$top_ip" | awk '{print $2}')
+echo "Most active IP: $ip with $count requests"
+echo ""
+
+# 5. Daily Request Averages
+color_header "5. Daily Request Averages"
+read total_requests days average_per_day <<< $(awk '
+    {
+      gsub(/^\[/, "", $4)
+      split($4, a, ":")
+      day = a[1]
+      counts[day]++
+    }
+    END {
+      tot = NR
+      d = length(counts)
+      avg = (d>0 ? tot/d : 0)
+      printf "%d %d %.2f\n", tot, d, avg
+    }
+' "$LOG_FILE")
+
+echo "Number of days:      $days"
+echo "Average per day:     $average_per_day"
+echo ""
+
+# 6. Failure Analysis
+color_header "6. Failure Analysis"
+grep -E '" [45][0-9][0-9]' "$LOG_FILE" | \
+  awk '{ gsub(/^\[/, "", $4); split($4,d,":"); print d[1] }' | \
+  sort | uniq -c | sort -rn | head -5 | \
+  awk '{ printf "%s — %d failures\n", $2, $1 }'
+echo ""
+
+# 7. Request by Hour (Saved to file)
+color_header "7. Request by Hour "
+TEMP_DIR=$(mktemp -d)
+awk -F'[' '{print $2}' "$LOG_FILE" | awk -F':' '{print $1 ":" $2}' | sort | uniq -c |
+while read -r count datetime; do
+    day=${datetime%:*}
+    hour=${datetime#*:}
+    echo "$day $hour $count"
+done > "$TEMP_DIR/daily_hourly_counts.txt"
+
+cat "$TEMP_DIR/daily_hourly_counts.txt"
+echo ""
+
+# 8. Request Trends (macOS Bash 3.2 compatible)
+color_header "8. Request Trends"
+awk -F'[' '{print $2}' "$LOG_FILE" | cut -d: -f1 | sort | uniq -c > "$TEMP_DIR/day_counts.txt"
+
+printf "%-12s %8s %12s\n" "Day" "Total" "Δ from prev"
+
+prev_count=""
+while read -r count day; do
+  if [[ -z "$prev_count" ]]; then
+    delta="—"
+  else
+    delta=$(( count - prev_count ))
+    [[ $delta -ge 0 ]] && delta="+$delta"
+  fi
+  printf "%-12s %8d %12s\n" "$day" "$count" "$delta"
+  prev_count=$count
+done < "$TEMP_DIR/day_counts.txt"
+echo ""
+
+# 9. Status Codes Breakdown
+color_header "9. Status Codes Breakdown"
+awk '{ print $9 }' "$LOG_FILE" | sort | uniq -c | sort -rn | \
+  awk '{ printf "%s: %d\n", $2, $1 }'
+echo ""
+
+# 10. Most Active User by Method
+color_header "10. Most Active User by Method"
+top_get=$(grep '"GET ' "$LOG_FILE" | awk '{print $1}' | sort | uniq -c | sort -rn | head -n1)
+get_count=$(echo "$top_get" | awk '{print $1}')
+get_ip=$(echo "$top_get" | awk '{print $2}')
+echo "GET  — $get_ip with $get_count requests"
+
+top_post=$(grep '"POST ' "$LOG_FILE" | awk '{print $1}' | sort | uniq -c | sort -rn | head -n1)
+post_count=$(echo "$top_post" | awk '{print $1}')
+post_ip=$(echo "$top_post" | awk '{print $2}')
+echo "POST — $post_ip with $post_count requests"
+echo ""
+
+# 11. Patterns in Failure Requests
+color_header "11. Patterns in Failure Requests"
+
+# A) Failures by Day
+day_failures=$(grep -E '" [45][0-9][0-9]' "$LOG_FILE" | \
+  awk '{ gsub(/^\[/, "", $4); split($4, a, ":"); print a[1] }' | \
+  sort | uniq -c | sort -rn)
+echo "$day_failures" | awk '{ printf "  %s — %d failures\n", $2, $1 }'
+
+# B) Failures by Hour
+hour_failures=$(grep -E '" [45][0-9][0-9]' "$LOG_FILE" | \
+  awk '{ gsub(/^\[/, "", $4); split($4, a, ":"); print a[2] }' | \
+  sort | uniq -c | sort -rn)
+echo "$hour_failures" | awk '{ printf "  %02d:00 — %d failures\n", $2, $1 }'
+
+# C) Peak failure day
+peak_day_line=$(echo "$day_failures" | head -n1)
+peak_day_count=$(echo "$peak_day_line" | awk '{print $1}')
+peak_day=$(echo "$peak_day_line" | awk '{print $2}')
+echo "Peak failure day: $peak_day with $peak_day_count failures"
+
+# D) Peak failure hour
+peak_hour_line=$(echo "$hour_failures" | head -n1)
+peak_hour_count=$(echo "$peak_hour_line" | awk '{print $1}')
+peak_hour=$(echo "$peak_hour_line" | awk '{printf "%02d", $2}')
+echo "Peak failure hour: ${peak_hour}:00 with $peak_hour_count failures"
+echo ""
+
+#!/bin/bash
+
+# Log file path
+LOG_FILE="$1"
+
+# Check if log file exists
+if [[ ! -f "$LOG_FILE" ]]; then
+  echo "File not found: $LOG_FILE"
+  exit 1
+fi
+
+# Function to add color
+color_header() {
+  echo -e "\033[4;34m$1\033[0m"
+}
+
+# 1. Request Counts
+color_header "1. Request Counts"
+TOTAL_REQUESTS=$(wc -l < "$LOG_FILE")
+GET_REQUESTS=$(grep '"GET' "$LOG_FILE" | wc -l)
+POST_REQUESTS=$(grep '"POST' "$LOG_FILE" | wc -l)
+OTHER_REQUESTS=$(grep -vE '"(GET|POST)' "$LOG_FILE" | grep -E '"[A-Z]+' | wc -l)
+
+echo "Total Requests:    $TOTAL_REQUESTS"
+echo "GET Requests:      $GET_REQUESTS"
+echo "POST Requests:     $POST_REQUESTS"
+echo "Other Requests:    $OTHER_REQUESTS"
+echo ""
+
+# 2. Unique IP Addresses
+color_header "2. Unique IP Addresses"
+ips=$(awk '{print $1}' "$LOG_FILE" | sort -u)
+echo "Total Unique IPs: $(echo "$ips" | wc -l)"
+
+printf "%-15s %8s %8s\n" "IP" "GET" "POST"
+for ip in $ips; do
+  get_count=$(grep "^$ip " "$LOG_FILE" | grep -c '"GET ')
+  post_count=$(grep "^$ip " "$LOG_FILE" | grep -c '"POST ')
+  printf "%-15s %8d %8d\n" "$ip" "$get_count" "$post_count"
+done
+echo ""
+
+# 3. Failure Requests
+color_header "3. Failure Requests"
+FAIL4=$(grep -E '" [4][0-9][0-9]' "$LOG_FILE" | wc -l)
+FAIL5=$(grep -E '" [5][0-9][0-9]' "$LOG_FILE" | wc -l)
+FAIL_TOTAL=$(( FAIL4 + FAIL5 ))
+FAIL_PCT=$(awk -v f="$FAIL_TOTAL" -v t="$TOTAL_REQUESTS" 'BEGIN { printf "%.2f", (f/t)*100 }')
+
+echo "4xx failures:    $FAIL4"
+echo "5xx failures:    $FAIL5"
+echo "Total failures:  $FAIL_TOTAL ($FAIL_PCT% of total)"
+echo ""
+
+# 4. Top User
+color_header "4. Top User"
+top_ip=$(awk '{print $1}' "$LOG_FILE" | sort | uniq -c | sort -rn | head -n1)
+count=$(echo "$top_ip" | awk '{print $1}')
+ip=$(echo "$top_ip" | awk '{print $2}')
+echo "Most active IP: $ip with $count requests"
+echo ""
+
+# 5. Daily Request Averages
+color_header "5. Daily Request Averages"
+read total_requests days average_per_day <<< $(awk '
+    {
+      gsub(/^\[/, "", $4)
+      split($4, a, ":")
+      day = a[1]
+      counts[day]++
+    }
+    END {
+      tot = NR
+      d = length(counts)
+      avg = (d>0 ? tot/d : 0)
+      printf "%d %d %.2f\n", tot, d, avg
+    }
+' "$LOG_FILE")
+
+echo "Number of days:      $days"
+echo "Average per day:     $average_per_day"
+echo ""
+
+# 6. Failure Analysis
+color_header "6. Failure Analysis"
+grep -E '" [45][0-9][0-9]' "$LOG_FILE" | \
+  awk '{ gsub(/^\[/, "", $4); split($4,d,":"); print d[1] }' | \
+  sort | uniq -c | sort -rn | head -5 | \
+  awk '{ printf "%s — %d failures\n", $2, $1 }'
+echo ""
+
+# 7. Request by Hour (Saved to file)
+color_header "7. Request by Hour "
+TEMP_DIR=$(mktemp -d)
+awk -F'[' '{print $2}' "$LOG_FILE" | awk -F':' '{print $1 ":" $2}' | sort | uniq -c |
+while read -r count datetime; do
+    day=${datetime%:*}
+    hour=${datetime#*:}
+    echo "$day $hour $count"
+done > "$TEMP_DIR/daily_hourly_counts.txt"
+
+cat "$TEMP_DIR/daily_hourly_counts.txt"
+echo ""
+
+# 8. Request Trends (macOS Bash 3.2 compatible)
+color_header "8. Request Trends"
+awk -F'[' '{print $2}' "$LOG_FILE" | cut -d: -f1 | sort | uniq -c > "$TEMP_DIR/day_counts.txt"
+
+printf "%-12s %8s %12s\n" "Day" "Total" "Δ from prev"
+
+prev_count=""
+while read -r count day; do
+  if [[ -z "$prev_count" ]]; then
+    delta="—"
+  else
+    delta=$(( count - prev_count ))
+    [[ $delta -ge 0 ]] && delta="+$delta"
+  fi
+  printf "%-12s %8d %12s\n" "$day" "$count" "$delta"
+  prev_count=$count
+done < "$TEMP_DIR/day_counts.txt"
+echo ""
+
+# 9. Status Codes Breakdown
+color_header "9. Status Codes Breakdown"
+awk '{ print $9 }' "$LOG_FILE" | sort | uniq -c | sort -rn | \
+  awk '{ printf "%s: %d\n", $2, $1 }'
+echo ""
+
+# 10. Most Active User by Method
+color_header "10. Most Active User by Method"
+top_get=$(grep '"GET ' "$LOG_FILE" | awk '{print $1}' | sort | uniq -c | sort -rn | head -n1)
+get_count=$(echo "$top_get" | awk '{print $1}')
+get_ip=$(echo "$top_get" | awk '{print $2}')
+echo "GET  — $get_ip with $get_count requests"
+
+top_post=$(grep '"POST ' "$LOG_FILE" | awk '{print $1}' | sort | uniq -c | sort -rn | head -n1)
+post_count=$(echo "$top_post" | awk '{print $1}')
+post_ip=$(echo "$top_post" | awk '{print $2}')
+echo "POST — $post_ip with $post_count requests"
+echo ""
+
+# 11. Patterns in Failure Requests
+color_header "11. Patterns in Failure Requests"
+
+# A) Failures by Day
+day_failures=$(grep -E '" [45][0-9][0-9]' "$LOG_FILE" | \
+  awk '{ gsub(/^\[/, "", $4); split($4, a, ":"); print a[1] }' | \
+  sort | uniq -c | sort -rn)
+echo "$day_failures" | awk '{ printf "  %s — %d failures\n", $2, $1 }'
+
+# B) Failures by Hour
+hour_failures=$(grep -E '" [45][0-9][0-9]' "$LOG_FILE" | \
+  awk '{ gsub(/^\[/, "", $4); split($4, a, ":"); print a[2] }' | \
+  sort | uniq -c | sort -rn)
+echo "$hour_failures" | awk '{ printf "  %02d:00 — %d failures\n", $2, $1 }'
+
+# C) Peak failure day
+peak_day_line=$(echo "$day_failures" | head -n1)
+peak_day_count=$(echo "$peak_day_line" | awk '{print $1}')
+peak_day=$(echo "$peak_day_line" | awk '{print $2}')
+echo "Peak failure day: $peak_day with $peak_day_count failures"
+
+# D) Peak failure hour
+peak_hour_line=$(echo "$hour_failures" | head -n1)
+peak_hour_count=$(echo "$peak_hour_line" | awk '{print $1}')
+peak_hour=$(echo "$peak_hour_line" | awk '{printf "%02d", $2}')
+echo "Peak failure hour: ${peak_hour}:00 with $peak_hour_count failures"
+echo ""
+
+
